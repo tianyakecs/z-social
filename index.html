@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#05070d">
+  <meta name="description" content="Z 是一个本地优先的灵感分享空间，记录此刻，让想法即刻连接。">
+  <title>Z — 让想法，即刻连接</title>
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#post-content">跳转到发布区</a>
+
+  <div class="environment" aria-hidden="true">
+    <div class="aurora aurora-cyan"></div>
+    <div class="aurora aurora-violet"></div>
+    <div class="grid-plane"></div>
+    <div class="orbital-ring"></div>
+    <span class="particle particle-one"></span>
+    <span class="particle particle-two"></span>
+    <span class="particle particle-three"></span>
+  </div>
+  <div class="pointer-glow" id="pointer-glow" aria-hidden="true"></div>
+
+  <header class="site-header">
+    <nav class="nav shell" aria-label="主导航">
+      <a class="brand" href="#" aria-label="Z 首页">
+        <span class="brand-mark" aria-hidden="true">Z</span>
+        <span class="brand-wordmark">Z<span class="brand-dot">.</span></span>
+        <span class="brand-tag">LOCAL SIGNAL</span>
+      </a>
+      <div class="nav-actions">
+        <span class="local-badge"><span class="status-dot" aria-hidden="true"></span>本地运行</span>
+        <button class="effects-toggle" id="effects-toggle" type="button" aria-pressed="true" aria-label="关闭装饰光效">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m12 3 1.4 4.6L18 9l-4.6 1.4L12 15l-1.4-4.6L6 9l4.6-1.4L12 3Z"></path>
+            <path d="m19 15 .8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15Z"></path>
+          </svg>
+          <span>光效</span>
+        </button>
+      </div>
+    </nav>
+  </header>
+
+  <main class="shell">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="eyebrow"><span aria-hidden="true"></span>YOUR LOCAL UNIVERSE</div>
+      <h1 id="hero-title">让想法，<br><span>即刻连接。</span></h1>
+      <p class="hero-copy">不必奔赴远方，此刻的灵感自有回响。<br class="desktop-break">在属于你的私密空间，记录每一个值得留下的瞬间。</p>
+      <div class="hero-meta">
+        <span><strong id="post-count">0</strong> 条本地动态</span>
+        <span class="meta-divider" aria-hidden="true"></span>
+        <span>无需账号 · 即刻记录</span>
+      </div>
+    </section>
+
+    <section class="composer" id="composer" aria-labelledby="composer-title">
+      <div class="card-glint" aria-hidden="true"></div>
+      <div class="composer-heading">
+        <div>
+          <p class="section-kicker">NEW TRANSMISSION</p>
+          <h2 id="composer-title">分享此刻</h2>
+        </div>
+        <svg class="composer-icon" viewBox="0 0 32 32" aria-hidden="true">
+          <path d="M5 16h22M16 5v22"></path>
+          <circle cx="16" cy="16" r="12"></circle>
+        </svg>
+      </div>
+
+      <form id="post-form" novalidate>
+        <label class="sr-only" for="post-content">动态内容</label>
+        <div class="input-wrap">
+          <textarea id="post-content" name="content" rows="4" placeholder="此刻，你在想什么？" aria-describedby="content-help char-count form-status" required></textarea>
+          <span class="input-corner corner-top" aria-hidden="true"></span>
+          <span class="input-corner corner-bottom" aria-hidden="true"></span>
+        </div>
+        <div class="composer-bottom">
+          <p class="privacy-note" id="content-help">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M6.5 8V6a3.5 3.5 0 0 1 7 0v2M5 8h10v8H5V8Z"></path></svg>
+            内容仅保存在当前浏览器
+          </p>
+          <div class="publish-actions">
+            <span class="character-count" id="char-count">0 / 280</span>
+            <button class="publish-button" id="publish-button" type="submit">
+              <span>发布动态</span>
+              <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m4 10 11-6-3.2 12-2.4-4.8L4 10Z"></path><path d="m9.4 11.2 2.7-2.7"></path></svg>
+            </button>
+          </div>
+        </div>
+        <p class="form-status" id="form-status" role="status" aria-live="polite"></p>
+      </form>
+    </section>
+
+    <section class="feed" aria-labelledby="feed-title">
+      <div class="feed-heading">
+        <div>
+          <p class="section-kicker">SIGNAL ARCHIVE</p>
+          <h2 id="feed-title">最近动态</h2>
+        </div>
+        <span class="feed-label"><span aria-hidden="true"></span>本地时间线</span>
+      </div>
+
+      <div class="empty-state" id="empty-state">
+        <div class="empty-visual" aria-hidden="true">
+          <span class="empty-orbit"></span>
+          <span class="empty-core">Z</span>
+        </div>
+        <h3>等待第一条信号</h3>
+        <p>你的想法会让这里开始闪耀。</p>
+        <a href="#post-content">开始记录<span aria-hidden="true">↗</span></a>
+      </div>
+
+      <ol class="timeline" id="timeline" aria-live="polite" aria-relevant="additions"></ol>
+    </section>
+  </main>
+
+  <footer class="site-footer shell">
+    <span class="footer-mark" aria-hidden="true">Z.</span>
+    <p>灵感留在此处，数据留在本地。</p>
+    <span class="footer-tech">LOCAL STORAGE / V1</span>
+  </footer>
+
+  <template id="post-template">
+    <li class="post-item">
+      <article class="post-card">
+        <div class="timeline-node" aria-hidden="true"><span></span></div>
+        <div class="post-card-top">
+          <span class="post-signal"><span aria-hidden="true">↗</span> Z / SIGNAL</span>
+          <time class="post-time"></time>
+        </div>
+        <p class="post-content"></p>
+        <div class="post-card-bottom" aria-hidden="true"><span>LOCAL TRANSMISSION</span><span class="signal-bars"><i></i><i></i><i></i></span></div>
+      </article>
+    </li>
+  </template>
+
+  <noscript><p class="noscript-message">请启用 JavaScript，以发布和查看本地动态。</p></noscript>
+</body>
+</html>

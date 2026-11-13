@@ -1,0 +1,9 @@
+node_modules/
+.codebuddy/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.log
+.env
+.env.*
