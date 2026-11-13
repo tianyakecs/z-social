@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, onMounted } from 'vue';
 import { storeToRefs } from 'pinia';
 
 import AppHeader from '@/components/AppHeader.vue';
@@ -10,24 +10,20 @@ import { useAmbientEffects } from '@/composables/useAmbientEffects';
 import { usePostsStore } from '@/stores/posts';
 
 const postsStore = usePostsStore();
-const { posts, postCount, loadError } = storeToRefs(postsStore);
+const { posts, postCount, loading, loadError } = storeToRefs(postsStore);
 const { effectsEnabled, toggleEffects } = useAmbientEffects();
 
-postsStore.hydrate();
+onMounted(() => {
+  void postsStore.hydrate();
+});
 
 const loadStatus = computed(() => {
-  if (loadError.value === 'DATA_INVALID') {
-    return {
-      state: 'warning',
-      message: '检测到异常数据，已恢复其中可用的动态。',
-    };
+  if (loading.value) {
+    return { state: 'loading', message: '正在从服务器加载动态…' };
   }
 
-  if (loadError.value === 'STORAGE_READ_FAILED') {
-    return {
-      state: 'error',
-      message: '无法读取本地数据，请检查浏览器的存储权限。',
-    };
+  if (loadError.value) {
+    return { state: 'error', message: loadError.value.message };
   }
 
   return null;
@@ -61,14 +57,14 @@ const loadStatus = computed(() => {
     <HeroSection :post-count="postCount" />
 
     <div class="content-column">
-      <PostComposer />
+      <PostComposer :disabled="loading" />
       <PostTimeline :posts="posts" />
     </div>
   </main>
 
   <footer class="site-footer shell">
     <span class="footer-mark" aria-hidden="true">Z.</span>
-    <p>灵感留在此处，数据留在本地。</p>
-    <span class="footer-tech">SIMPLE · PRIVATE · YOURS</span>
+    <p>灵感发布在此处，数据保存在演示服务器。</p>
+    <span class="footer-tech">SIMPLE · SHARED · FRESH</span>
   </footer>
 </template>

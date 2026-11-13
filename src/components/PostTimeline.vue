@@ -17,7 +17,7 @@ defineProps({
         <p class="section-kicker">YOUR QUIET TIMELINE</p>
         <h2 id="feed-title">最近动态</h2>
       </div>
-      <span class="feed-label"><span aria-hidden="true"></span>本地时间线</span>
+      <span class="feed-label"><span aria-hidden="true"></span>实时时间线</span>
     </div>
 
     <EmptyState v-if="posts.length === 0" />

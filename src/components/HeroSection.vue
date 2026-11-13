@@ -26,9 +26,9 @@ const orbitFailed = ref(false);
         <span>无需账号，打开即写</span>
       </div>
       <div class="hero-meta">
-        <span><strong id="post-count">{{ postCount }}</strong> 条本地动态</span>
+        <span><strong id="post-count">{{ postCount }}</strong> 条动态</span>
         <span class="meta-divider" aria-hidden="true"></span>
-        <span>只属于此处的私密空间</span>
+        <span>所有访问者共享的演示空间</span>
       </div>
     </div>
 
@@ -49,7 +49,7 @@ const orbitFailed = ref(false);
       </div>
       <div class="floating-note note-saved" data-parallax="0.8">
         <span class="note-icon"><svg viewBox="0 0 20 20"><path d="m5 10 3 3 7-7"></path></svg></span>
-        <span><strong>灵感已保存</strong><small>安心留在本地</small></span>
+        <span><strong>灵感已发布</strong><small>保存在服务器</small></span>
       </div>
       <div class="floating-note note-private" data-parallax="0.35">
         <svg viewBox="0 0 20 20"><path d="M6.5 8V6a3.5 3.5 0 0 1 7 0v2M5 8h10v8H5V8Z"></path></svg>

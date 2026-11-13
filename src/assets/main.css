@@ -661,6 +661,11 @@ textarea[aria-invalid="true"] {
   box-shadow: 0 0 0 4px rgba(215, 0, 21, 0.05);
 }
 
+textarea:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
 .composer-bottom {
   display: flex;
   align-items: center;
@@ -1369,6 +1374,11 @@ body.effects-off [data-reveal] {
   box-shadow: var(--shadow-small);
   color: var(--ink-secondary);
   font-size: 12px;
+}
+
+.load-status[data-state="loading"] {
+  background: #eef4ff;
+  color: var(--ink-secondary);
 }
 
 .load-status[data-state="warning"] {

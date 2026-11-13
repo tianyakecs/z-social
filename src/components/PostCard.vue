@@ -35,7 +35,7 @@ const fullTime = computed(() => new Date(props.post.createdAt)
     </div>
     <p class="post-content">{{ post.content }}</p>
     <div class="post-card-bottom" aria-hidden="true">
-      <span>已保存在本地</span><span class="saved-check">✓</span>
+      <span>已发布到服务器</span><span class="saved-check">✓</span>
     </div>
   </article>
 </template>
