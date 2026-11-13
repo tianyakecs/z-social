@@ -31,7 +31,15 @@ function toIsoString(now) {
 }
 
 function toPost(record) {
-  return { id: record.id, content: record.content, createdAt: record.createdAt };
+  return {
+    id: record.id,
+    content: record.content,
+    createdAt: record.createdAt,
+    likeCount: record.likeCount,
+    favoriteCount: record.favoriteCount,
+    liked: record.liked,
+    favorited: record.favorited,
+  };
 }
 
 export function createMemoryPostStore(options = {}) {
@@ -63,11 +71,45 @@ export function createMemoryPostStore(options = {}) {
       content: trimmed,
       createdAt: toIsoString(now),
       sequence: sequence++,
+      likeCount: 0,
+      favoriteCount: 0,
+      liked: false,
+      favorited: false,
     };
 
     records.set(record.id, record);
     return toPost(record);
   }
 
-  return { list, getById, create };
+  function toggleLike(id) {
+    const record = records.get(id);
+    if (!record) return null;
+
+    if (record.liked) {
+      record.liked = false;
+      record.likeCount = Math.max(0, record.likeCount - 1);
+    } else {
+      record.liked = true;
+      record.likeCount += 1;
+    }
+
+    return toPost(record);
+  }
+
+  function toggleFavorite(id) {
+    const record = records.get(id);
+    if (!record) return null;
+
+    if (record.favorited) {
+      record.favorited = false;
+      record.favoriteCount = Math.max(0, record.favoriteCount - 1);
+    } else {
+      record.favorited = true;
+      record.favoriteCount += 1;
+    }
+
+    return toPost(record);
+  }
+
+  return { list, getById, create, toggleLike, toggleFavorite };
 }
