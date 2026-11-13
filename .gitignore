@@ -1,9 +1,11 @@
-node_modules/
-.codebuddy/
-.vscode/
-.idea/
-.DS_Store
+# OS 产生的垃圾文件
 Thumbs.db
-*.log
-.env
-.env.*
+Desktop.ini
+.DS_Store
+
+# Python 缓存
+__pycache__/
+*.pyc
+
+# CodeBuddy 本地过程数据（技能目录保留提交，便于共享）
+.codebuddy/plans/
