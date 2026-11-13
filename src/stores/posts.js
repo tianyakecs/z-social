@@ -2,11 +2,19 @@ import { computed, ref, shallowRef } from 'vue';
 import { defineStore } from 'pinia';
 
 import { PostsApiError, createPostsApi } from '@/lib/postsApi';
-import { validateContent } from '@/lib/postRules';
+import { normalizePost, validateContent } from '@/lib/postRules';
 
 const UNKNOWN_ERROR_MESSAGE = '发布时遇到问题，请稍后重试。你的文字仍保留在输入框中。';
 const UNKNOWN_LOAD_MESSAGE = '动态加载失败，请稍后重试。';
 const BUSY_MESSAGE = '正在发布，请稍候。';
+const REACTION_PENDING_MESSAGE = '上一次操作还在处理中，请稍候再试。';
+const INVALID_REACTION_POST_MESSAGE = '动态标识无效，请刷新后重试。';
+const UNKNOWN_REACTION_MESSAGE = '操作没有成功，请稍后重试。';
+
+const REACTION_METHODS = {
+  like: 'toggleLike',
+  favorite: 'toggleFavorite',
+};
 
 let defaultService = null;
 
@@ -36,6 +44,7 @@ export const usePostsStore = defineStore('posts', () => {
   const loading = ref(false);
   const publishing = ref(false);
   const loadError = shallowRef(null);
+  const pendingReactionIds = ref([]);
 
   const postCount = computed(() => posts.value.length);
   const isEmpty = computed(() => posts.value.length === 0);
@@ -96,14 +105,84 @@ export const usePostsStore = defineStore('posts', () => {
     }
   }
 
+  async function toggleReaction(kind, postId, { service = getDefaultService() } = {}) {
+    const id = typeof postId === 'string' ? postId : '';
+
+    if (!id) {
+      return {
+        ok: false,
+        post: null,
+        error: 'INVALID_POST_ID',
+        message: INVALID_REACTION_POST_MESSAGE,
+        status: 0,
+      };
+    }
+
+    // 同一动态同一时刻只允许一个进行中的切换请求
+    if (pendingReactionIds.value.includes(id)) {
+      return {
+        ok: false,
+        post: null,
+        error: 'REACTION_PENDING',
+        message: REACTION_PENDING_MESSAGE,
+        status: 0,
+      };
+    }
+
+    pendingReactionIds.value = [...pendingReactionIds.value, id];
+
+    try {
+      const method = REACTION_METHODS[kind];
+      const raw = await service[method](id);
+      const next = normalizePost(raw);
+
+      if (!next || next.id !== id) {
+        return {
+          ok: false,
+          post: null,
+          error: 'INVALID_RESPONSE',
+          message: INVALID_REACTION_POST_MESSAGE,
+          status: 0,
+        };
+      }
+
+      // 原地替换同 id 项，保持既有顺序，不重新排序
+      posts.value = posts.value.map((item) => (item.id === next.id ? next : item));
+
+      return { ok: true, post: next, error: null, message: null, status: 200 };
+    } catch (error) {
+      const payload = toErrorPayload(error, UNKNOWN_REACTION_MESSAGE);
+      return {
+        ok: false,
+        post: null,
+        error: payload.code,
+        message: payload.message,
+        status: payload.status,
+      };
+    } finally {
+      pendingReactionIds.value = pendingReactionIds.value.filter((item) => item !== id);
+    }
+  }
+
+  function toggleLike(postId, { service = getDefaultService() } = {}) {
+    return toggleReaction('like', postId, { service });
+  }
+
+  function toggleFavorite(postId, { service = getDefaultService() } = {}) {
+    return toggleReaction('favorite', postId, { service });
+  }
+
   return {
     posts,
     loading,
     publishing,
     loadError,
+    pendingReactionIds,
     postCount,
     isEmpty,
     hydrate,
     publish,
+    toggleLike,
+    toggleFavorite,
   };
 });

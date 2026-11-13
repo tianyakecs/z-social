@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { storeToRefs } from 'pinia';
 
 import AppHeader from '@/components/AppHeader.vue';
@@ -10,8 +10,10 @@ import { useAmbientEffects } from '@/composables/useAmbientEffects';
 import { usePostsStore } from '@/stores/posts';
 
 const postsStore = usePostsStore();
-const { posts, postCount, loading, loadError } = storeToRefs(postsStore);
+const { posts, postCount, loading, loadError, pendingReactionIds } = storeToRefs(postsStore);
 const { effectsEnabled, toggleEffects } = useAmbientEffects();
+
+const reactionStatus = ref(null);
 
 onMounted(() => {
   void postsStore.hydrate();
@@ -28,6 +30,20 @@ const loadStatus = computed(() => {
 
   return null;
 });
+
+function reportReaction(result) {
+  reactionStatus.value = result?.ok
+    ? null
+    : { state: 'error', message: result?.message ?? '操作没有成功，请稍后重试。' };
+}
+
+async function handleToggleLike(postId) {
+  reportReaction(await postsStore.toggleLike(postId));
+}
+
+async function handleToggleFavorite(postId) {
+  reportReaction(await postsStore.toggleFavorite(postId));
+}
 </script>
 
 <template>
@@ -58,7 +74,18 @@ const loadStatus = computed(() => {
 
     <div class="content-column">
       <PostComposer :disabled="loading" />
-      <PostTimeline :posts="posts" />
+      <p
+        v-if="reactionStatus"
+        class="reaction-status"
+        role="status"
+        :data-state="reactionStatus.state"
+      >{{ reactionStatus.message }}</p>
+      <PostTimeline
+        :posts="posts"
+        :pending-ids="pendingReactionIds"
+        @toggle-like="handleToggleLike"
+        @toggle-favorite="handleToggleFavorite"
+      />
     </div>
   </main>
 
