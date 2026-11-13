@@ -8,12 +8,40 @@ import {
   createPost,
   createPostsApi,
   listPosts,
+  toggleFavorite,
+  toggleLike,
 } from '@/lib/postsApi';
 
 const VALID_POSTS = [
-  { id: 'newer', content: '更新的一条', createdAt: '2026-11-13T09:00:00.000Z' },
-  { id: 'older', content: '较早的一条', createdAt: '2026-11-13T08:00:00.000Z' },
+  {
+    id: 'newer',
+    content: '更新的一条',
+    createdAt: '2026-11-13T09:00:00.000Z',
+    likeCount: 0,
+    favoriteCount: 0,
+    liked: false,
+    favorited: false,
+  },
+  {
+    id: 'older',
+    content: '较早的一条',
+    createdAt: '2026-11-13T08:00:00.000Z',
+    likeCount: 0,
+    favoriteCount: 0,
+    liked: false,
+    favorited: false,
+  },
 ];
+
+const TOGGLED = {
+  id: 'post 1/2',
+  content: '被点赞的动态',
+  createdAt: '2026-11-13T08:00:00.000Z',
+  likeCount: 3,
+  favoriteCount: 1,
+  liked: true,
+  favorited: false,
+};
 
 function jsonResponse(body, status = 200) {
   return {
@@ -69,6 +97,46 @@ describe('listPosts', () => {
     await expect(createPostsApi({ fetch: fetchMock }).listPosts()).resolves.toEqual([]);
   });
 
+  it('fills in the reaction fields with 0 / false when the server omits them', async () => {
+    const fetchMock = vi.fn(async () => jsonResponse({
+      posts: [{ id: 'legacy', content: '旧数据', createdAt: '2026-11-13T08:00:00.000Z' }],
+    }));
+
+    const posts = await createPostsApi({ fetch: fetchMock }).listPosts();
+
+    expect(posts[0]).toEqual({
+      id: 'legacy',
+      content: '旧数据',
+      createdAt: '2026-11-13T08:00:00.000Z',
+      likeCount: 0,
+      favoriteCount: 0,
+      liked: false,
+      favorited: false,
+    });
+  });
+
+  it('rejects counters that are not non-negative integers', async () => {
+    for (const likeCount of [-1, 1.5, '3', null]) {
+      const fetchMock = vi.fn(async () => jsonResponse({
+        posts: [{ ...VALID_POSTS[0], likeCount }],
+      }));
+
+      const error = await createPostsApi({ fetch: fetchMock }).listPosts().catch((thrown) => thrown);
+      expect(error).toMatchObject({ code: 'INVALID_RESPONSE' });
+    }
+  });
+
+  it('rejects boolean flags that are not real booleans', async () => {
+    for (const liked of ['true', 1, null]) {
+      const fetchMock = vi.fn(async () => jsonResponse({
+        posts: [{ ...VALID_POSTS[0], liked }],
+      }));
+
+      const error = await createPostsApi({ fetch: fetchMock }).listPosts().catch((thrown) => thrown);
+      expect(error).toMatchObject({ code: 'INVALID_RESPONSE' });
+    }
+  });
+
   it('maps a JSON parse failure to INVALID_RESPONSE', async () => {
     const fetchMock = vi.fn(async () => brokenJsonResponse(200));
 
@@ -104,7 +172,15 @@ describe('listPosts', () => {
 
 describe('createPost', () => {
   it('POSTs JSON content and returns the created post', async () => {
-    const created = { id: 'post-9', content: '新的想法', createdAt: '2026-11-13T10:00:00.000Z' };
+    const created = {
+      id: 'post-9',
+      content: '新的想法',
+      createdAt: '2026-11-13T10:00:00.000Z',
+      likeCount: 0,
+      favoriteCount: 0,
+      liked: false,
+      favorited: false,
+    };
     const fetchMock = vi.fn(async () => jsonResponse({ post: created }, 201));
 
     const post = await createPostsApi({ fetch: fetchMock }).createPost('  新的想法  ');
@@ -163,6 +239,104 @@ describe('createPost', () => {
   });
 });
 
+describe('toggleLike', () => {
+  it('POSTs to the encoded like endpoint and returns the normalized post', async () => {
+    const fetchMock = vi.fn(async () => jsonResponse({ post: TOGGLED }));
+
+    const post = await createPostsApi({ fetch: fetchMock }).toggleLike('post 1/2');
+
+    expect(post).toEqual(TOGGLED);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('/api/posts/post%201%2F2/like');
+    expect(url.startsWith('/')).toBe(true);
+    expect(init.method).toBe('POST');
+  });
+
+  it('maps a 404 body to NOT_FOUND with the server message', async () => {
+    const fetchMock = vi.fn(async () => jsonResponse({
+      error: { code: 'NOT_FOUND', message: '动态不存在。' },
+    }, 404));
+
+    const error = await createPostsApi({ fetch: fetchMock }).toggleLike('missing').catch((thrown) => thrown);
+
+    expect(error).toBeInstanceOf(PostsApiError);
+    expect(error).toMatchObject({ code: 'NOT_FOUND', message: '动态不存在。', status: 404 });
+  });
+
+  it('maps a rejected fetch to NETWORK_ERROR', async () => {
+    const fetchMock = vi.fn(() => Promise.reject(new TypeError('Failed to fetch')));
+
+    const error = await createPostsApi({ fetch: fetchMock }).toggleLike('any').catch((thrown) => thrown);
+
+    expect(error).toMatchObject({
+      code: 'NETWORK_ERROR',
+      message: NETWORK_ERROR_MESSAGE,
+      status: 0,
+    });
+  });
+
+  it('rejects a payload that does not contain a usable post', async () => {
+    const fetchMock = vi.fn(async () => jsonResponse({
+      post: { id: 'broken', content: '   ', createdAt: '2026-11-13T08:00:00.000Z' },
+    }));
+
+    const error = await createPostsApi({ fetch: fetchMock }).toggleLike('broken').catch((thrown) => thrown);
+
+    expect(error).toMatchObject({ code: 'INVALID_RESPONSE', status: 200 });
+  });
+
+  it('fills in the reaction fields when the server omits them', async () => {
+    const fetchMock = vi.fn(async () => jsonResponse({
+      post: { id: 'p1', content: '无计数字段', createdAt: '2026-11-13T08:00:00.000Z' },
+    }));
+
+    const post = await createPostsApi({ fetch: fetchMock }).toggleLike('p1');
+
+    expect(post).toEqual({
+      id: 'p1',
+      content: '无计数字段',
+      createdAt: '2026-11-13T08:00:00.000Z',
+      likeCount: 0,
+      favoriteCount: 0,
+      liked: false,
+      favorited: false,
+    });
+  });
+});
+
+describe('toggleFavorite', () => {
+  it('POSTs to the favorite endpoint with the same URL contract', async () => {
+    const favorited = { ...TOGGLED, liked: false, favorited: true, favoriteCount: 2 };
+    const fetchMock = vi.fn(async () => jsonResponse({ post: favorited }));
+
+    const post = await createPostsApi({ fetch: fetchMock }).toggleFavorite('post 1/2');
+
+    expect(post).toEqual(favorited);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('/api/posts/post%201%2F2/favorite');
+    expect(init.method).toBe('POST');
+  });
+});
+
+describe('reaction convenience helpers', () => {
+  it('uses globalThis.fetch for toggleLike and toggleFavorite', async () => {
+    const likeFetch = vi.fn(async () => jsonResponse({ post: TOGGLED }));
+    vi.stubGlobal('fetch', likeFetch);
+
+    await expect(toggleLike('post 1/2')).resolves.toMatchObject({ id: 'post 1/2', liked: true });
+    expect(likeFetch.mock.calls[0][0]).toBe('/api/posts/post%201%2F2/like');
+
+    const favoriteFetch = vi.fn(async () => jsonResponse({
+      post: { ...TOGGLED, liked: false, favorited: true },
+    }));
+    vi.stubGlobal('fetch', favoriteFetch);
+
+    await expect(toggleFavorite('post 1/2')).resolves.toMatchObject({ favorited: true });
+    expect(favoriteFetch.mock.calls[0][0]).toBe('/api/posts/post%201%2F2/favorite');
+  });
+});
+
 describe('failure mapping', () => {
   it('maps a rejected fetch to NETWORK_ERROR with a Chinese message', async () => {
     const fetchMock = vi.fn(() => Promise.reject(new TypeError('Failed to fetch')));
@@ -205,7 +379,15 @@ describe('fetch injection', () => {
     expect(globalFetch).toHaveBeenCalledTimes(1);
 
     vi.stubGlobal('fetch', vi.fn(async () => jsonResponse({
-      post: { id: 'p2', content: '便捷方法', createdAt: '2026-11-13T11:00:00.000Z' },
+      post: {
+        id: 'p2',
+        content: '便捷方法',
+        createdAt: '2026-11-13T11:00:00.000Z',
+        likeCount: 0,
+        favoriteCount: 0,
+        liked: false,
+        favorited: false,
+      },
     }, 201)));
 
     await expect(createPost('便捷方法')).resolves.toMatchObject({ id: 'p2' });

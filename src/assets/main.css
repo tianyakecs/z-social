@@ -1414,3 +1414,147 @@ body.effects-off [data-reveal] {
     transform: none;
   }
 }
+
+/* ---- 点赞 / 收藏 操作区（likes-favorites-contract v1） ---- */
+
+.post-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 13px;
+}
+
+.post-action {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 13px;
+  border: 1px solid rgba(29, 29, 31, 0.07);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.68);
+  color: var(--ink-muted);
+  cursor: pointer;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  transition: color 220ms ease, background-color 220ms ease, border-color 220ms ease,
+    box-shadow 220ms ease, transform 220ms var(--ease-out);
+}
+
+.post-action svg {
+  width: 15px;
+  height: 15px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.6;
+  transition: fill 220ms ease, stroke 220ms ease, transform 220ms var(--ease-out);
+}
+
+.post-action .action-count {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.post-action:disabled {
+  cursor: progress;
+  opacity: 0.62;
+}
+
+.post-action:focus-visible {
+  outline: 3px solid rgba(0, 122, 255, 0.42);
+  outline-offset: 3px;
+}
+
+/* 激活态：点赞粉色系 */
+.post-action-like.is-active {
+  border-color: rgba(214, 51, 108, 0.3);
+  background: rgba(255, 238, 244, 0.92);
+  color: #d6336c;
+  box-shadow: 0 4px 14px rgba(214, 51, 108, 0.13);
+}
+
+.post-action-like.is-active svg {
+  fill: currentColor;
+}
+
+/* 激活态：收藏金色系 */
+.post-action-favorite.is-active {
+  border-color: rgba(176, 125, 0, 0.3);
+  background: rgba(255, 248, 227, 0.94);
+  color: #b07d00;
+  box-shadow: 0 4px 14px rgba(176, 125, 0, 0.13);
+}
+
+.post-action-favorite.is-active svg {
+  fill: currentColor;
+}
+
+.reaction-status {
+  margin: 0 0 14px;
+  padding: 11px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: var(--shadow-small);
+  color: var(--ink-secondary);
+  font-size: 12px;
+}
+
+.reaction-status[data-state="error"] {
+  background: #fff1f2;
+  color: var(--rose);
+}
+
+@media (hover: hover) {
+  .post-action:hover {
+    border-color: var(--line-strong);
+    background: rgba(255, 255, 255, 0.94);
+    box-shadow: var(--shadow-small);
+    color: var(--ink-secondary);
+    transform: translateY(-1px);
+  }
+
+  .post-action-like:hover {
+    color: #d6336c;
+  }
+
+  .post-action-favorite:hover {
+    color: #b07d00;
+  }
+
+  .post-action:active {
+    transform: scale(0.97);
+  }
+}
+
+@media (max-width: 480px) {
+  .post-actions {
+    gap: 8px;
+    margin-bottom: 11px;
+  }
+
+  .post-action {
+    min-height: 36px;
+    padding: 6px 11px;
+    font-size: 11px;
+  }
+
+  .post-action .action-count {
+    font-size: 11px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .post-action,
+  .post-action svg {
+    transition: none !important;
+  }
+
+  .post-action:hover,
+  .post-action:active {
+    transform: none;
+  }
+}

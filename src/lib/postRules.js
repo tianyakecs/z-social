@@ -28,6 +28,17 @@ export function validateContent(content) {
   return trimmed;
 }
 
+function normalizeCount(value, fallback) {
+  // 契约：缺失 / undefined 才补默认值；显式传入的非法值必须判定为非法
+  if (value === undefined) return fallback;
+  return Number.isInteger(value) && value >= 0 ? value : null;
+}
+
+function normalizeFlag(value, fallback) {
+  if (value === undefined) return fallback;
+  return typeof value === 'boolean' ? value : null;
+}
+
 export function normalizePost(record) {
   if (!record || typeof record !== 'object') return null;
   if (typeof record.id !== 'string' || !record.id.trim()) return null;
@@ -39,5 +50,22 @@ export function normalizePost(record) {
   const createdAt = new Date(record.createdAt);
   if (Number.isNaN(createdAt.getTime())) return null;
 
-  return { id: record.id, content, createdAt: createdAt.toISOString() };
+  const likeCount = normalizeCount(record.likeCount, 0);
+  const favoriteCount = normalizeCount(record.favoriteCount, 0);
+  const liked = normalizeFlag(record.liked, false);
+  const favorited = normalizeFlag(record.favorited, false);
+
+  if (likeCount === null || favoriteCount === null || liked === null || favorited === null) {
+    return null;
+  }
+
+  return {
+    id: record.id,
+    content,
+    createdAt: createdAt.toISOString(),
+    likeCount,
+    favoriteCount,
+    liked,
+    favorited,
+  };
 }

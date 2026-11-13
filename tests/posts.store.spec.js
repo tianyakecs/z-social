@@ -17,6 +17,36 @@ const CREATED = {
   createdAt: '2026-11-13T10:00:00.000Z',
 };
 
+const FIRST = {
+  id: 'first',
+  content: '第一条',
+  createdAt: '2026-11-13T09:00:00.000Z',
+  likeCount: 0,
+  favoriteCount: 0,
+  liked: false,
+  favorited: false,
+};
+
+const SECOND = {
+  id: 'second',
+  content: '第二条',
+  createdAt: '2026-11-13T08:00:00.000Z',
+  likeCount: 2,
+  favoriteCount: 1,
+  liked: false,
+  favorited: false,
+};
+
+const THIRD = {
+  id: 'third',
+  content: '第三条',
+  createdAt: '2026-11-13T07:00:00.000Z',
+  likeCount: 5,
+  favoriteCount: 0,
+  liked: true,
+  favorited: false,
+};
+
 function createService({ listPosts, createPost } = {}) {
   return {
     listPosts: listPosts ?? vi.fn(async () => []),
@@ -25,6 +55,16 @@ function createService({ listPosts, createPost } = {}) {
       content,
       createdAt: CREATED.createdAt,
     })),
+  };
+}
+
+function createReactionService({ toggleLike, toggleFavorite } = {}) {
+  return {
+    listPosts: vi.fn(async () => []),
+    createPost: vi.fn(async (content) => ({ ...CREATED, content })),
+    toggleLike: toggleLike ?? vi.fn(async () => ({ ...FIRST, likeCount: 1, liked: true })),
+    toggleFavorite: toggleFavorite
+      ?? vi.fn(async () => ({ ...FIRST, favoriteCount: 1, favorited: true })),
   };
 }
 
@@ -225,5 +265,160 @@ describe('posts store', () => {
 
     expect(getItem).not.toHaveBeenCalled();
     expect(setItem).not.toHaveBeenCalled();
+  });
+
+  it('exposes an empty pendingReactionIds collection after hydration', async () => {
+    const store = usePostsStore();
+    await store.hydrate({ service: createService({ listPosts: async () => [FIRST] }) });
+
+    expect(store.pendingReactionIds).toEqual([]);
+  });
+
+  it('replaces the matching post in place after a successful like and keeps the order', async () => {
+    const store = usePostsStore();
+    await store.hydrate({
+      service: createService({ listPosts: async () => [FIRST, SECOND, THIRD] }),
+    });
+
+    const updated = { ...SECOND, likeCount: 3, liked: true };
+    const service = createReactionService({ toggleLike: vi.fn(async () => updated) });
+
+    const result = await store.toggleLike('second', { service });
+
+    expect(result).toMatchObject({ ok: true, error: null });
+    expect(result.post).toEqual(updated);
+    expect(service.toggleLike).toHaveBeenCalledTimes(1);
+    expect(service.toggleLike).toHaveBeenCalledWith('second');
+    expect(store.posts.map((post) => post.id)).toEqual(['first', 'second', 'third']);
+    expect(store.posts[1]).toEqual(updated);
+    expect(store.posts[0]).toStrictEqual(FIRST);
+    expect(store.posts[2]).toStrictEqual(THIRD);
+  });
+
+  it('uses toggleFavorite for favorites and leaves likes untouched', async () => {
+    const store = usePostsStore();
+    await store.hydrate({ service: createService({ listPosts: async () => [FIRST, SECOND] }) });
+
+    const service = createReactionService();
+
+    const result = await store.toggleFavorite('first', { service });
+
+    expect(result).toMatchObject({ ok: true, error: null });
+    expect(service.toggleFavorite).toHaveBeenCalledWith('first');
+    expect(service.toggleLike).not.toHaveBeenCalled();
+    expect(store.posts[0].favorited).toBe(true);
+  });
+
+  it('exposes the toggling id in pendingReactionIds until the request settles', async () => {
+    const store = usePostsStore();
+    await store.hydrate({ service: createService({ listPosts: async () => [FIRST] }) });
+
+    const gate = deferred();
+    const service = createReactionService({ toggleLike: vi.fn(() => gate.promise) });
+
+    const running = store.toggleLike('first', { service });
+    expect(store.pendingReactionIds).toContain('first');
+
+    gate.resolve({ ...FIRST, likeCount: 1, liked: true });
+    await running;
+
+    expect(store.pendingReactionIds).toEqual([]);
+  });
+
+  it('rejects a second concurrent toggle of the same post without a second request', async () => {
+    const store = usePostsStore();
+    await store.hydrate({ service: createService({ listPosts: async () => [FIRST] }) });
+
+    const gate = deferred();
+    const service = createReactionService({ toggleLike: vi.fn(() => gate.promise) });
+
+    const first = store.toggleLike('first', { service });
+    const second = await store.toggleLike('first', { service });
+
+    expect(second).toMatchObject({ ok: false, error: 'REACTION_PENDING' });
+    expect(typeof second.message).toBe('string');
+    expect(/[\u4e00-\u9fa5]/.test(second.message)).toBe(true);
+
+    gate.resolve({ ...FIRST, likeCount: 1, liked: true });
+    const firstResult = await first;
+
+    expect(firstResult.ok).toBe(true);
+    expect(service.toggleLike).toHaveBeenCalledTimes(1);
+    expect(store.posts[0].likeCount).toBe(1);
+  });
+
+  it('still allows toggling a different post while one toggle is in flight', async () => {
+    const store = usePostsStore();
+    await store.hydrate({ service: createService({ listPosts: async () => [FIRST, SECOND] }) });
+
+    const gate = deferred();
+    const service = createReactionService({
+      toggleLike: vi.fn((postId) => (postId === 'first'
+        ? gate.promise
+        : Promise.resolve({ ...SECOND, likeCount: 3, liked: true }))),
+    });
+
+    const running = store.toggleLike('first', { service });
+    const other = await store.toggleLike('second', { service });
+
+    expect(other.ok).toBe(true);
+    expect(service.toggleLike).toHaveBeenCalledTimes(2);
+
+    gate.resolve({ ...FIRST, likeCount: 1, liked: true });
+    await running;
+    expect(store.pendingReactionIds).toEqual([]);
+  });
+
+  it('keeps the list untouched and reports the API error when a toggle fails', async () => {
+    const store = usePostsStore();
+    await store.hydrate({ service: createService({ listPosts: async () => [FIRST, SECOND] }) });
+    const before = store.posts.slice();
+
+    const failure = new PostsApiError('NOT_FOUND', '动态不存在。', 404);
+    const service = createReactionService({
+      toggleLike: vi.fn(async () => {
+        throw failure;
+      }),
+    });
+
+    const result = await store.toggleLike('second', { service });
+
+    expect(result).toMatchObject({
+      ok: false,
+      error: 'NOT_FOUND',
+      message: '动态不存在。',
+      status: 404,
+    });
+    expect(store.posts).toHaveLength(2);
+    store.posts.forEach((post, index) => expect(post).toBe(before[index]));
+    expect(store.pendingReactionIds).toEqual([]);
+  });
+
+  it('maps an unexpected toggle exception to UNKNOWN_ERROR and clears the pending id', async () => {
+    const store = usePostsStore();
+    await store.hydrate({ service: createService({ listPosts: async () => [FIRST] }) });
+
+    const service = createReactionService({
+      toggleLike: vi.fn(async () => {
+        throw new Error('boom');
+      }),
+    });
+
+    const result = await store.toggleLike('first', { service });
+
+    expect(result).toMatchObject({ ok: false, error: 'UNKNOWN_ERROR' });
+    expect(/[\u4e00-\u9fa5]/.test(result.message)).toBe(true);
+    expect(store.pendingReactionIds).toEqual([]);
+    expect(store.posts[0]).toStrictEqual(FIRST);
+  });
+
+  it('rejects a toggle without a usable post id', async () => {
+    const store = usePostsStore();
+    const service = createReactionService();
+
+    const result = await store.toggleLike('', { service });
+
+    expect(result).toMatchObject({ ok: false, error: 'INVALID_POST_ID' });
+    expect(service.toggleLike).not.toHaveBeenCalled();
   });
 });

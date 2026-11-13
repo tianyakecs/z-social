@@ -3,6 +3,12 @@ import { normalizePost } from '@/lib/postRules';
 export const POSTS_ENDPOINT = '/api/posts';
 export const NETWORK_ERROR_MESSAGE = '网络连接失败，请检查网络后重试。你的文字仍保留在输入框中。';
 export const INVALID_RESPONSE_MESSAGE = '服务器返回的数据无法识别，请稍后重试。你的文字仍保留在输入框中。';
+export const INVALID_POST_ID_MESSAGE = '动态标识无效，请刷新后重试。';
+
+export const REACTION_SEGMENTS = {
+  like: 'like',
+  favorite: 'favorite',
+};
 
 export class PostsApiError extends Error {
   constructor(code, message, status = 0) {
@@ -38,13 +44,24 @@ function errorFromBody(body, status) {
   return new PostsApiError('INVALID_RESPONSE', INVALID_RESPONSE_MESSAGE, status);
 }
 
+function resolveEndpoint(endpoint) {
+  return typeof endpoint === 'string' && endpoint.trim()
+    ? endpoint.replace(/\/+$/, '')
+    : POSTS_ENDPOINT;
+}
+
+function reactionUrl(endpoint, postId, kind) {
+  const base = resolveEndpoint(endpoint);
+  return `${base}/${encodeURIComponent(postId)}/${REACTION_SEGMENTS[kind]}`;
+}
+
 export function createPostsApi({ fetch: fetchImpl, endpoint = POSTS_ENDPOINT } = {}) {
-  async function request(init = {}) {
+  async function request(init = {}, url = endpoint) {
     const doFetch = resolveFetch(fetchImpl);
 
     let response;
     try {
-      response = await doFetch(endpoint, init);
+      response = await doFetch(url, init);
     } catch (error) {
       if (error instanceof PostsApiError) throw error;
       throw new PostsApiError('NETWORK_ERROR', NETWORK_ERROR_MESSAGE);
@@ -94,7 +111,28 @@ export function createPostsApi({ fetch: fetchImpl, endpoint = POSTS_ENDPOINT } =
     return post;
   }
 
-  return { listPosts, createPost };
+  async function toggleReaction(postId, kind) {
+    if (typeof postId !== 'string' || !postId.trim()) {
+      throw new PostsApiError('INVALID_POST_ID', INVALID_POST_ID_MESSAGE);
+    }
+
+    // 契约：请求体可为空，服务端不读取 body
+    const { body, status } = await request(
+      { method: 'POST', headers: { Accept: 'application/json' } },
+      reactionUrl(endpoint, postId, kind),
+    );
+
+    const post = normalizePost(body.post);
+    if (!post) throw new PostsApiError('INVALID_RESPONSE', INVALID_RESPONSE_MESSAGE, status);
+    return post;
+  }
+
+  return {
+    listPosts,
+    createPost,
+    toggleLike: (postId) => toggleReaction(postId, 'like'),
+    toggleFavorite: (postId) => toggleReaction(postId, 'favorite'),
+  };
 }
 
 export function listPosts(options) {
@@ -103,4 +141,12 @@ export function listPosts(options) {
 
 export function createPost(content, options) {
   return createPostsApi(options).createPost(content);
+}
+
+export function toggleLike(postId, options) {
+  return createPostsApi(options).toggleLike(postId);
+}
+
+export function toggleFavorite(postId, options) {
+  return createPostsApi(options).toggleFavorite(postId);
 }
