@@ -1361,6 +1361,26 @@ body.effects-off [data-reveal] {
   }
 }
 
+.load-status {
+  margin-top: 18px;
+  padding: 11px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: var(--shadow-small);
+  color: var(--ink-secondary);
+  font-size: 12px;
+}
+
+.load-status[data-state="warning"] {
+  background: #fff8e9;
+  color: var(--amber);
+}
+
+.load-status[data-state="error"] {
+  background: #fff1f2;
+  color: var(--rose);
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;

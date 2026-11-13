@@ -6,6 +6,12 @@ Desktop.ini
 # Python 缓存
 __pycache__/
 *.pyc
+.venv/
+
+# Node 与构建产物
+node_modules/
+dist/
+coverage/
 
 # CodeBuddy 本地过程数据（技能目录保留提交，便于共享）
 .codebuddy/plans/

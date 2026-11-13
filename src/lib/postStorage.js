@@ -24,10 +24,11 @@ function normalizePost(record) {
   if (typeof record.content !== 'string') return null;
 
   const content = record.content.trim();
-  const count = characterCount(content);
   const date = new Date(record.createdAt);
 
-  if (!content || count > MAX_CONTENT_LENGTH || Number.isNaN(date.getTime())) return null;
+  if (!content || characterCount(content) > MAX_CONTENT_LENGTH || Number.isNaN(date.getTime())) {
+    return null;
+  }
 
   return {
     id: record.id,
@@ -60,7 +61,7 @@ export function createPost(content, now = new Date(), id = createId()) {
 export function loadPosts(storage) {
   let rawValue;
   try {
-    rawValue = storage.getItem(STORAGE_KEY);
+    rawValue = storage?.getItem(STORAGE_KEY) ?? null;
   } catch {
     return { posts: [], error: 'STORAGE_READ_FAILED' };
   }
@@ -89,6 +90,7 @@ export function loadPosts(storage) {
 
 export function savePosts(storage, posts) {
   try {
+    if (!storage) throw new Error('Storage is unavailable.');
     storage.setItem(STORAGE_KEY, JSON.stringify(posts));
     return { ok: true, error: null };
   } catch {
