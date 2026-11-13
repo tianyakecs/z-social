@@ -42,6 +42,18 @@ export function createApp(options = {}) {
     }
   });
 
+  app.post('/api/posts/:id/like', (c) => {
+    const post = store.toggleLike(c.req.param('id'));
+    if (!post) return c.json(errorPayload('NOT_FOUND', MESSAGES.NOT_FOUND), 404);
+    return c.json({ post });
+  });
+
+  app.post('/api/posts/:id/favorite', (c) => {
+    const post = store.toggleFavorite(c.req.param('id'));
+    if (!post) return c.json(errorPayload('NOT_FOUND', MESSAGES.NOT_FOUND), 404);
+    return c.json({ post });
+  });
+
   app.get('/api/posts/:id', (c) => {
     const post = store.getById(c.req.param('id'));
     if (!post) return c.json(errorPayload('NOT_FOUND', MESSAGES.NOT_FOUND), 404);
