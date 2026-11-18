@@ -18,6 +18,7 @@ defineEmits({
         <span class="brand-mark" aria-hidden="true">Z</span>
         <span class="brand-wordmark">Z<span class="brand-dot">.</span></span>
       </a>
+      <span class="nav-slogan">灵感，即刻发光<span class="slogan-spark" aria-hidden="true">✦</span></span>
       <div class="nav-actions">
         <span class="local-badge"><span class="status-dot" aria-hidden="true"></span>本地运行</span>
         <button
